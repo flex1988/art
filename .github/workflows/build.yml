@@ -1,0 +1,17 @@
+name: build
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: build
+        run: bazelisk build //...
+
+      - name: run unittest
+        run: ./bazel-bin/art_unittest

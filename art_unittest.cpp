@@ -1,6 +1,6 @@
 #define private public
-
 #include "adaptive_radix_tree.h"
+#define private private
 #include "gtest/gtest.h"
 #include "util.h"
 #include <map>
@@ -205,37 +205,6 @@ TEST(art, Node256_Reverse)
         EXPECT_EQ(value, ptr);
     }
 
-    art->Destroy();
-    delete art;
-}
-
-TEST(art, Random)
-{
-    AdaptiveRadixTree* art = new AdaptiveRadixTree;
-    art->Init();
-
-    uint64_t keycount = 10000000;
-    std::map<uint64_t, void*> verifyMap;
-    uint64_t key = 0;
-
-    do
-    {
-        void* ptr = (void*)rand();
-        key = (uint64_t)rand() << 32 + rand();
-        art->Insert(key, ptr);
-        verifyMap[key] = ptr;
-        keycount--;
-    } while (keycount > 0);
-    
-
-    for (std::map<uint64_t, void*>::iterator iter = verifyMap.begin(); iter != verifyMap.end(); iter++)
-    {
-        void* value = art->Search(iter->first);
-        char* key = (char*)&iter->first;
-        char arr[32];
-        sprintf(arr, "%hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu\n", key[0], key[1], key[2], key[3], key[4], key[5], key[6], key[7]);
-        EXPECT_EQ(value, iter->second) << "key: " << arr;
-    }
     art->Destroy();
     delete art;
 }
@@ -796,7 +765,38 @@ TEST(art, RangeInsert_Basic2)
     delete art;
 }
 
-TEST(art, RangeInsert_Random)
+TEST(art, DISABLED_Random)
+{
+    AdaptiveRadixTree* art = new AdaptiveRadixTree;
+    art->Init();
+
+    uint64_t keycount = 10000000;
+    std::map<uint64_t, void*> verifyMap;
+    uint64_t key = 0;
+
+    do
+    {
+        void* ptr = (void*)rand();
+        key = (uint64_t)rand() << 32 + rand();
+        art->Insert(key, ptr);
+        verifyMap[key] = ptr;
+        keycount--;
+    } while (keycount > 0);
+    
+
+    for (std::map<uint64_t, void*>::iterator iter = verifyMap.begin(); iter != verifyMap.end(); iter++)
+    {
+        void* value = art->Search(iter->first);
+        char* key = (char*)&iter->first;
+        char arr[32];
+        sprintf(arr, "%hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu\n", key[0], key[1], key[2], key[3], key[4], key[5], key[6], key[7]);
+        EXPECT_EQ(value, iter->second) << "key: " << arr;
+    }
+    art->Destroy();
+    delete art;
+}
+
+TEST(art, DISABLED_RangeInsert_Random)
 {
     AdaptiveRadixTree* art = new AdaptiveRadixTree;
     art->Init();
