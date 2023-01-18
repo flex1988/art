@@ -281,22 +281,41 @@ void AdaptiveRadixTree::addLeafChild16(Node16* node16, unsigned char start, uint
     void* cursor = val;
     int start_index = -1;
     int end_index = -1;
+    int end = start + length - 1;
+    // SSE指令_mm_cmplt_epi8 _mm_cmpgt_epi8是针对有符号数的函数
+    // 如果使用_mm_cmplt_epi16，那么需要两条SSE指令，所以这里可以先不用SSE指令实现
     if (node->child_count > 0)
     {
-        int end = start + length - 1;
-        int mask = (1 << node->child_count) - 1;
-        __m128i childs = _mm_loadu_si128(reinterpret_cast<const __m128i*>(node16->child_keys));
-        __m128i cmpend = _mm_cmplt_epi8(_mm_set1_epi8(end), childs);
-        int bitfieldend = _mm_movemask_epi8(cmpend) & mask;
-        if (bitfieldend)
+        // __m128i childs = _mm_loadu_si128(reinterpret_cast<const __m128i*>(node16->child_keys));
+        // __m128i cmpend = _mm_cmplt_epi8(_mm_set1_epi8(end), childs);
+        // int bitfieldend = _mm_movemask_epi8(cmpend) & mask;
+        // if (bitfieldend)
+        // {
+        //     end_index = __builtin_ctz(bitfieldend);
+        // }
+        // __m128i cmpstart = _mm_cmpgt_epi8(_mm_set1_epi8(start), childs);
+        // int bitfieldstart = _mm_movemask_epi8(cmpstart) & mask;
+        // if (bitfieldstart)
+        // {
+        //     start_index = 32 - __builtin_clz(bitfieldstart) - 1;
+        // }
+
+        for (int i = 0; i < node->child_count; i++)
         {
-            end_index = __builtin_ctz(bitfieldend);
+            if (node16->child_keys[i] >= start)
+            {
+                break;
+            }
+            start_index = i;
         }
-        __m128i cmpstart = _mm_cmpgt_epi8(_mm_set1_epi8(start), childs);
-        int bitfieldstart = _mm_movemask_epi8(cmpstart) & mask;
-        if (bitfieldstart)
+
+        for (int j = node->child_count - 1; j >= 0; j--)
         {
-            start_index = 32 - __builtin_clz(bitfieldstart) - 1;
+            if (node16->child_keys[j] <= end)
+            {
+                break;
+            }
+            end_index = j;
         }
     }
     

@@ -13,12 +13,5 @@ jobs:
       - name: build
         run: bazelisk build //...
 
-      - name: run with crash
-        run: |
-          ulimit -c unlimited         # Enable core dumps to be captured (must be in same run block) 
-          sudo ./bazel-bin/art_unittest    # Excute with elemvated permissions (works with scripts)
-          sudo chmod -R +rwx /usr/share/apport/apport* # Enable access to core dumps (doesn't need to be in same run block)
-      - uses: actions/upload-artifact@master # capture all crashes as build artifacts
-        with:
-          name: crashes
-          path: /usr/share/apport/apport
+      - name: run ut
+        run: ./bazel-bin/art_unittest

@@ -5,6 +5,7 @@
 #include "util.h"
 #include <map>
 #include <unordered_map>
+#include <emmintrin.h>
 
 using namespace art;
 
@@ -689,6 +690,10 @@ TEST(art, LeafNode_Leaf16_Insert)
     checkChild(art, node, 7, 1, (void*)3);
     checkChild(art, node, 9, 1, (void*)4);
 
+    new (node16) Node16;
+    art->addLeafChild16(node16, (unsigned char)0, 2, (void*)1);
+    art->addLeafChild16(node16, (unsigned char)115, 14, (void*)2);
+
     art->Destroy();
     delete art;
 }
@@ -765,7 +770,7 @@ TEST(art, RangeInsert_Basic2)
     delete art;
 }
 
-TEST(art, DISABLED_Random)
+TEST(art, Random)
 {
     AdaptiveRadixTree* art = new AdaptiveRadixTree;
     art->Init();
@@ -796,7 +801,7 @@ TEST(art, DISABLED_Random)
     delete art;
 }
 
-TEST(art, DISABLED_RangeInsert_Random)
+TEST(art, RangeInsert_Random)
 {
     AdaptiveRadixTree* art = new AdaptiveRadixTree;
     art->Init();
@@ -859,6 +864,155 @@ TEST(art, Next)
     }
     art->Destroy();
     delete art;
+}
+
+TEST(art, SSE_lt)
+{
+    int mask = (1 << 16) - 1;
+    signed char array[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+
+    {
+        __m128i b = _mm_loadu_si128(reinterpret_cast<const __m128i*>(array));
+        __m128i cmp = _mm_cmplt_epi8(_mm_set1_epi8(0), b);
+        int bitfieldend = _mm_movemask_epi8(cmp) & mask;
+        int index = -1;
+        if (bitfieldend)
+        {
+            index = __builtin_ctz(bitfieldend);
+        }
+        EXPECT_EQ(index, 1);
+    }
+
+    {
+        __m128i b = _mm_loadu_si128(reinterpret_cast<const __m128i*>(array));
+        __m128i cmp = _mm_cmplt_epi8(_mm_set1_epi8(14), b);
+        int bitfieldend = _mm_movemask_epi8(cmp) & mask;
+        int index = -1;
+        if (bitfieldend)
+        {
+            index = __builtin_ctz(bitfieldend);
+        }
+        EXPECT_EQ(index, 15);
+    }
+
+    {
+        __m128i b = _mm_loadu_si128(reinterpret_cast<const __m128i*>(array));
+        __m128i cmp = _mm_cmplt_epi8(_mm_set1_epi8(15), b);
+        int bitfieldend = _mm_movemask_epi8(cmp) & mask;
+        int index = -1;
+        if (bitfieldend)
+        {
+            index = __builtin_ctz(bitfieldend);
+        }
+        EXPECT_EQ(index, -1);
+    }
+
+
+    unsigned char array1[] = {120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135};
+
+    {
+        __m128i b = _mm_loadu_si128(reinterpret_cast<const __m128i*>(array1));
+        __m128i cmp = _mm_cmplt_epi8(_mm_set1_epi8(120), b);
+        int bitfieldend = _mm_movemask_epi8(cmp) & mask;
+        int index = -1;
+        if (bitfieldend)
+        {
+            index = __builtin_ctz(bitfieldend);
+        }
+        EXPECT_EQ(index, 1);
+    }
+
+    {
+        __m128i b = _mm_loadu_si128(reinterpret_cast<const __m128i*>(array1));
+        __m128i cmp = _mm_cmplt_epi8(_mm_set1_epi8(127), b);
+        int bitfieldend = _mm_movemask_epi8(cmp) & mask;
+        int index = -1;
+        if (bitfieldend)
+        {
+            index = __builtin_ctz(bitfieldend);
+        }
+        EXPECT_EQ(index, -1);
+    }
+}
+
+TEST(art, SSE_gt)
+{
+    int mask = (1 << 16) - 1;
+    signed char array[] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
+
+    {
+        __m128i b = _mm_loadu_si128(reinterpret_cast<const __m128i*>(array));
+        __m128i cmp = _mm_cmpgt_epi8(_mm_set1_epi8(0), b);
+        int bitfieldend = _mm_movemask_epi8(cmp) & mask;
+        int index = -1;
+        if (bitfieldend)
+        {
+            index = __builtin_ctz(bitfieldend);
+        }
+        EXPECT_EQ(index, -1);
+    }
+
+    {
+        __m128i b = _mm_loadu_si128(reinterpret_cast<const __m128i*>(array));
+        __m128i cmp = _mm_cmpgt_epi8(_mm_set1_epi8(14), b);
+        int bitfieldend = _mm_movemask_epi8(cmp) & mask;
+        int index = -1;
+        if (bitfieldend)
+        {
+            index = __builtin_ctz(bitfieldend);
+        }
+        EXPECT_EQ(index, 0);
+    }
+
+    {
+        __m128i b = _mm_loadu_si128(reinterpret_cast<const __m128i*>(array));
+        __m128i cmp = _mm_cmpgt_epi8(_mm_set1_epi8(15), b);
+        int bitfieldend = _mm_movemask_epi8(cmp) & mask;
+        int index = -1;
+        if (bitfieldend)
+        {
+            index = __builtin_ctz(bitfieldend);
+        }
+        EXPECT_EQ(index, 0);
+    }
+
+
+    unsigned char array1[] = {120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135};
+    {
+        __m128i b = _mm_loadu_si128(reinterpret_cast<const __m128i*>(array1));
+        __m128i cmp = _mm_cmplt_epi8(_mm_set1_epi8(120), b);
+        int bitfieldend = _mm_movemask_epi8(cmp) & mask;
+        int index = -1;
+        if (bitfieldend)
+        {
+            index = __builtin_ctz(bitfieldend);
+        }
+        EXPECT_EQ(index, 1);
+    }
+
+    {
+        __m128i b = _mm_loadu_si128(reinterpret_cast<const __m128i*>(array1));
+        __m128i cmp = _mm_cmpgt_epi8(_mm_set1_epi8(127), b);
+        int bitfieldend = _mm_movemask_epi8(cmp) & mask;
+        int index = -1;
+        if (bitfieldend)
+        {
+            index = __builtin_ctz(bitfieldend);
+        }
+        EXPECT_EQ(index, 0);
+    }
+
+    {
+        __m128i b = _mm_loadu_si128(reinterpret_cast<const __m128i*>(array1));
+        __m128i cmp = _mm_cmpgt_epi8(_mm_set1_epi8(135), b);
+        int bitfieldend = _mm_movemask_epi8(cmp) & mask;
+        int index = -1;
+        if (bitfieldend)
+        {
+            index = __builtin_ctz(bitfieldend);
+        }
+        EXPECT_EQ(index, 8);
+    }
 }
 
 GTEST_API_ int main(int argc, char **argv) {
