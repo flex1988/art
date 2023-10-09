@@ -17,11 +17,17 @@ enum NodeType
     NODE256 = 3
 };
 
+struct Bitmap
+{
+    unsigned char bitmap[256];
+};
+
 struct Node
 {
-    uint8_t         prefix_length;
     uint16_t        child_count;
+    uint8_t         prefix_length;
     NodeType        type : 2;
+    bool            is_leaf : 1;
     unsigned char   prefix[7];
 };
 
@@ -36,7 +42,6 @@ struct Node4
         header.type = NODE4;
     }
 };
-
 
 struct Node16
 {
@@ -66,11 +71,63 @@ struct Node256
 {
     Node            header;
     Node*           child_ptrs[256];
+    Bitmap*         child_bitmap;
     Node256()
     {
         memset(this, 0, sizeof(*this));
         header.type = NODE256;
     }
+};
+
+struct Node4Persistent
+{
+    Node            header;
+    unsigned char   child_keys[4];
+};
+
+struct Node16Persistent
+{
+    Node            header;
+    unsigned char   child_keys[16];
+};
+
+struct Node48Persistent
+{
+    Node            header;
+    unsigned char   child_ptr_indexs[256];
+};
+
+struct Node256Persistent
+{
+    Node            header;
+    unsigned char   child_bitmap[256]; // 用来存储child和槽位的关系
+};
+
+struct Node4LeafPersistent
+{
+    Node            header;
+    unsigned char   child_keys[4];
+    Node*           child_ptrs[4];
+};
+
+struct Node16LeafPersistent
+{
+    Node            header;
+    unsigned char   child_keys[16];
+    Node*           child_ptrs[16];
+};
+
+struct Node48LeafPersistent
+{
+    Node            header;
+    unsigned char   child_ptr_indexs[256];
+    Node*           child_ptrs[48];
+};
+
+struct Node256LeafPersistent
+{
+    Node            header;
+    Node*           child_ptrs[256];
 };
 
 class AdaptiveRadixTree
@@ -110,6 +167,14 @@ public:
         return _total_keys;
     }
 
+    void Serialization(void** buf, int& size);
+
+    int Deserialization(const void* buf, const int bufSize);
+
+    void PrintNode(Node* node);
+
+    void DumpTree();
+
 private:
     void insert(Node* node, Node** ref, unsigned char* key, uint32_t length, void* val, int depth);
 
@@ -118,6 +183,12 @@ private:
     Node48* makeNode48();
     Node256* makeNode256();
     Node* makeProperNode(uint32_t length);
+
+    bool serializationNode(const Node* node, char* buf, int& nodeSize);
+
+    bool deserializationNode(Node** node, char** buf);
+
+    Node* makeNode(NodeType type);
 
     void freeNode(Node* node);
 
@@ -148,7 +219,7 @@ private:
     int checkPrefix(Node* node, const unsigned char* key, int depth);
     uint32_t maxCapacitySize(NodeType type);
 
-    void destroy_node(Node* node, int depth);
+    void destroyNode(Node* node, int depth);
 
 private:
 

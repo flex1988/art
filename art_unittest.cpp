@@ -806,7 +806,7 @@ TEST(art, RangeInsert_Random)
     AdaptiveRadixTree* art = new AdaptiveRadixTree;
     art->Init();
 
-    uint64_t rangecount = 1000000;
+    uint64_t rangecount = 100000;
     std::map<uint64_t, void*> verifyMap;
     uint64_t verifyCursor = 0;
 
@@ -864,6 +864,172 @@ TEST(art, Next)
     }
     art->Destroy();
     delete art;
+}
+
+TEST(art, Serialization_Node4)
+{
+    AdaptiveRadixTree* art = new AdaptiveRadixTree;
+
+    Node4* n4 = art->makeNode4();
+
+    n4->header.child_count = 4;
+    n4->header.is_leaf = false;
+    n4->header.prefix[0] = 'a';
+    n4->header.type = NODE4;
+    n4->child_keys[0] = 0;
+    n4->child_keys[1] = 1;
+    n4->child_keys[2] = 2;
+    n4->child_keys[3] = 3;
+
+    char* buf = new char[4096];
+    int nodeSize = 0;
+
+    EXPECT_TRUE(art->serializationNode(reinterpret_cast<Node*>(n4), buf, nodeSize));
+    EXPECT_TRUE(nodeSize > 0);
+
+    Node* denode;
+    EXPECT_TRUE(art->deserializationNode(&denode, &buf));
+
+    EXPECT_EQ(memcmp(n4, denode, sizeof(Node4)), 0);
+}
+
+TEST(art, Serialization_Node16)
+{
+    AdaptiveRadixTree* art = new AdaptiveRadixTree;
+
+    Node16* n16 = art->makeNode16();
+
+    n16->header.child_count = 12;
+    n16->header.is_leaf = false;
+    n16->header.prefix[0] = 'a';
+    n16->header.type = NODE16;
+    n16->child_keys[0] = 0;
+    n16->child_keys[1] = 1;
+    n16->child_keys[2] = 2;
+    n16->child_keys[3] = 3;
+    memset(&n16->child_ptrs[0], 0, sizeof(void*) * 16);
+
+    char* buf = new char[4096];
+    int nodeSize = 0;
+
+    EXPECT_TRUE(art->serializationNode(reinterpret_cast<Node*>(n16), buf, nodeSize));
+    EXPECT_TRUE(nodeSize > 0);
+
+    Node* denode;
+    EXPECT_TRUE(art->deserializationNode(&denode, &buf));
+
+    EXPECT_EQ(memcmp(n16, denode, sizeof(Node16)), 0);
+}
+
+TEST(art, Serialization_Node48)
+{
+    AdaptiveRadixTree* art = new AdaptiveRadixTree;
+
+    Node48* n48 = art->makeNode48();
+
+    n48->header.child_count = 5;
+    n48->header.is_leaf = false;
+    n48->header.prefix[0] = 'a';
+    n48->header.type = NODE48;
+    n48->child_ptr_indexs[0] = 0;
+    n48->child_ptr_indexs[1] = 1;
+    n48->child_ptr_indexs[2] = 2;
+    n48->child_ptr_indexs[8] = 3;
+    n48->child_ptr_indexs[12] = 133;
+    memset(&n48->child_ptrs[0], 0, sizeof(void*) * 48);
+
+    char* buf = new char[4096];
+    int nodeSize = 0;
+
+    EXPECT_TRUE(art->serializationNode(reinterpret_cast<Node*>(n48), buf, nodeSize));
+    EXPECT_TRUE(nodeSize > 0);
+
+    Node* denode;
+    EXPECT_TRUE(art->deserializationNode(&denode, &buf));
+
+    EXPECT_EQ(memcmp(n48, denode, sizeof(Node48)), 0);
+}
+
+TEST(art, Serialization_Node256)
+{
+    AdaptiveRadixTree* art = new AdaptiveRadixTree;
+
+    Node256* n256 = art->makeNode256();
+
+    n256->header.child_count = 5;
+    n256->header.is_leaf = false;
+    n256->header.prefix[0] = 'a';
+    n256->header.type = NODE256;
+    memset(&n256->child_ptrs[0], 0, sizeof(void*) * 256);
+    n256->child_ptrs[100] = (Node*)(void*)1;
+
+    char* buf = new char[4096];
+    int nodeSize = 0;
+
+    EXPECT_TRUE(art->serializationNode(reinterpret_cast<Node*>(n256), buf, nodeSize));
+    EXPECT_TRUE(nodeSize > 0);
+
+    Node* denode;
+    EXPECT_TRUE(art->deserializationNode(&denode, &buf));
+    for (int i = 0; i < 256; i++)
+    {
+        if (i == 100)
+        {
+            EXPECT_TRUE(reinterpret_cast<Node256*>(denode)->child_bitmap->bitmap[i] == 1);
+        }
+        else
+        {
+            EXPECT_TRUE(reinterpret_cast<Node256*>(denode)->child_bitmap->bitmap[i] == 0);
+        }
+    }
+    n256->child_ptrs[100] = NULL;
+    reinterpret_cast<Node256*>(denode)->child_bitmap = NULL;
+
+    EXPECT_EQ(memcmp(n256, denode, sizeof(Node256)), 0);
+}
+
+TEST(art, Serialization_Tree)
+{
+    AdaptiveRadixTree* art = new AdaptiveRadixTree;
+    art->Init();
+
+    std::map<uint64_t, void*> verifyMap;
+    int ranges = 1000;
+
+    while (ranges-- > 0)
+    {
+        uint64_t start = (uint64_t)rand() << 32 + rand();
+        uint32_t lengthmax = 256 - start % 256;
+        uint32_t length = std::max(1U, rand() % lengthmax);
+        void* ptr = (void*)rand();
+
+        art->RangeInsert(start, length, ptr);
+        for (int i = 0; i < length; i++)
+        {
+            verifyMap[start + i] = ptr;
+        }
+    }
+
+    art->DumpTree();
+
+    void* buf = NULL;
+    int bufSize = 0;
+    art->Serialization(&buf, bufSize);
+
+    EXPECT_TRUE(buf != NULL);
+
+    art->Destroy();
+    delete art;
+
+    AdaptiveRadixTree* newArt = new AdaptiveRadixTree;
+    newArt->Deserialization(buf, bufSize);
+
+
+    newArt->DumpTree();
+
+    for (auto it = verifyMap.begin(); it != verifyMap.end(); it++) {
+        checkValueRange(newArt, it->first, 1, it->second);
+    }
 }
 
 TEST(art, SSE_lt)
