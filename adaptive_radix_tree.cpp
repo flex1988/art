@@ -242,18 +242,7 @@ void AdaptiveRadixTree::addLeafChild256(Node* node, Node** ref, unsigned char st
         {
             node->child_count++;
         }
-        else
-        {
-            if (_deref_func)
-            {
-                _deref_func(node256->child_ptrs[start + i]);
-            }
-        }
         node256->child_ptrs[start + i] = reinterpret_cast<Node*>(cursor);
-        if (_incr_func)
-        {
-            _incr_func(&cursor);
-        }
     }
     assert(node->child_count <= 256);
 }
@@ -267,10 +256,6 @@ void AdaptiveRadixTree::addLeafChild48(Node* node, Node** ref, unsigned char sta
     {
         if (node48->child_ptr_indexs[start + i] > 0)
         {
-            if (_deref_func)
-            {
-                _deref_func(node48->child_ptrs[node48->child_ptr_indexs[start + i] - 1]);
-            }
             node48->child_ptrs[node48->child_ptr_indexs[start + i] - 1] = reinterpret_cast<Node*>(cursor);
         }
         else
@@ -280,10 +265,6 @@ void AdaptiveRadixTree::addLeafChild48(Node* node, Node** ref, unsigned char sta
             node48->child_ptrs[insert_index] = reinterpret_cast<Node*>(cursor);
             insert_index++;
             node->child_count++;
-        }
-        if (_incr_func)
-        {
-            _incr_func(&cursor);
         }
     }
     assert(node->child_count <= 48);
@@ -340,15 +321,7 @@ void AdaptiveRadixTree::addLeafChild16(Node16* node16, unsigned char start, uint
         for (int i = 0; i < length; i++)
         {
             node16->child_keys[i] = start + i;
-            if (_deref_func && node16->child_ptrs[i])
-            {
-                _deref_func(node16->child_ptrs[i]);
-            }
             node16->child_ptrs[i] = reinterpret_cast<Node*>(cursor);
-            if (_incr_func)
-            {
-                _incr_func(&cursor);
-            }
         }
         node->child_count = length;
     }
@@ -362,15 +335,7 @@ void AdaptiveRadixTree::addLeafChild16(Node16* node16, unsigned char start, uint
         for (int i = 0; i < length; i++)
         {
             node16->child_keys[start_index + i + 1] = start + i;
-            if (_deref_func && node16->child_ptrs[start_index + i + 1])
-            {
-                _deref_func(node16->child_ptrs[start_index + i + 1]);
-            }
             node16->child_ptrs[start_index + i + 1] = reinterpret_cast<Node*>(cursor);
-            if (_incr_func)
-            {
-                _incr_func(&cursor);
-            }
         }
         node->child_count += movelen;
 
@@ -384,15 +349,7 @@ void AdaptiveRadixTree::addLeafChild16(Node16* node16, unsigned char start, uint
         for (int i = 0; i < length; i++)
         {
             node16->child_keys[i] = start + i;
-            if (_deref_func && node16->child_ptrs[i])
-            {
-                _deref_func(node16->child_ptrs[i]);
-            }
             node16->child_ptrs[i] = reinterpret_cast<Node*>(cursor);
-            if (_incr_func)
-            {
-                _incr_func(&cursor);
-            }
         }
         node->child_count += movelen;
     }
@@ -402,15 +359,7 @@ void AdaptiveRadixTree::addLeafChild16(Node16* node16, unsigned char start, uint
         for (int i = 0; i < length; i++)
         {
             node16->child_keys[start_index + i + 1] =  start + i;
-            if (_deref_func && node16->child_ptrs[start_index + i + 1])
-            {
-                _deref_func(node16->child_ptrs[start_index + i + 1]);
-            }
             node16->child_ptrs[start_index + i + 1] = reinterpret_cast<Node*>(cursor);
-            if (_incr_func)
-            {
-                _incr_func(&cursor);
-            }
         }   
         node->child_count = start_index + 1 + length;
     }
@@ -431,16 +380,8 @@ void AdaptiveRadixTree::addLeafChild4(Node* node, Node** ref, unsigned char star
     {
         if (node4->child_keys[i] == start + inserted)
         {
-            if (_deref_func && _deref_func)
-            {
-                _deref_func(node4->child_ptrs[i]);
-            }
             node4->child_ptrs[i] = reinterpret_cast<Node*>(val);
             inserted++;
-            if (_incr_func)
-            {
-                _incr_func(&val);
-            }
         }
         else if (node4->child_keys[i] > start + inserted)
         {
@@ -451,10 +392,6 @@ void AdaptiveRadixTree::addLeafChild4(Node* node, Node** ref, unsigned char star
             node4->child_ptrs[i] = reinterpret_cast<Node*>(val);
             inserted++;
             node->child_count++;
-            if (_incr_func)
-            {
-                _incr_func(&val);
-            }
         }
 
         if (inserted == length)
@@ -469,10 +406,6 @@ void AdaptiveRadixTree::addLeafChild4(Node* node, Node** ref, unsigned char star
         node->child_count++;
         i++;
         inserted++;
-        if (_incr_func)
-        {
-            _incr_func(&val);
-        }
     }
     assert(node->child_count <= 4);
 }
@@ -542,19 +475,6 @@ void AdaptiveRadixTree::addChild4(Node4* node4, Node** ref, unsigned char byte, 
             }
         }
 
-        // for (int i = node->child_count; i >= slot; i--)
-        // {
-        //     node4->child_keys[i + 1] = node4->child_keys[i];
-        //     node4->child_ptrs[i + 1] = node4->child_ptrs[i];
-        // }
-
-        // printf("%d %d %d\n", node->child_count, slot, byte);
-        // for (int i = 0; i < node->child_count; i++)
-        // {
-        //     printf("%d ", node4->child_keys[i]);
-        // }
-        // printf("\n");
-
         if (node->child_count > slot)
         {
             memmove(&node4->child_keys[slot+1], &node4->child_keys[slot], node->child_count - slot);
@@ -563,12 +483,6 @@ void AdaptiveRadixTree::addChild4(Node4* node4, Node** ref, unsigned char byte, 
         node4->child_keys[slot] = byte;
         node4->child_ptrs[slot] = reinterpret_cast<Node*>(child);
         node->child_count++;
-
-        // for (int i = 0; i < node->child_count; i++)
-        // {
-        //     printf("%d ", node4->child_keys[i]);
-        // }
-        // printf("\n");
     }
     else
     {
@@ -967,11 +881,16 @@ void AdaptiveRadixTree::findLeafChild256(Node256* node, unsigned char start, uin
     memcpy(&(*vals)[0], &node->child_ptrs[start], length * sizeof(void*));
 }
 
-void AdaptiveRadixTree::Init(std::function<void(void*)> deref, std::function<void(void*)> incr)
+void AdaptiveRadixTree::Init()
 {
     _root = reinterpret_cast<Node*>(makeNode4());
-    _deref_func = deref;
-    _incr_func = incr;
+    _max_node_persistent_size = std::max(sizeof(Node4Persistent), sizeof(Node16Persistent));
+    _max_node_persistent_size = std::max(_max_node_persistent_size, sizeof(Node48Persistent));
+    _max_node_persistent_size = std::max(_max_node_persistent_size, sizeof(Node256Persistent));
+    _max_node_persistent_size = std::max(_max_node_persistent_size, sizeof(Node4LeafPersistent));
+    _max_node_persistent_size = std::max(_max_node_persistent_size, sizeof(Node16LeafPersistent));
+    _max_node_persistent_size = std::max(_max_node_persistent_size, sizeof(Node48LeafPersistent));
+    _max_node_persistent_size = std::max(_max_node_persistent_size, sizeof(Node256LeafPersistent));
 }
 
 void* AdaptiveRadixTree::Search(uint64_t key)
@@ -1408,7 +1327,7 @@ int AdaptiveRadixTree::Deserialization(const void* buf, const int bufSize)
 void AdaptiveRadixTree::Serialization(void** buf, int& size)
 {
     char* pos = NULL;
-    int bufSize = 100 << 20;
+    int bufSize = 1 << 20;
     posix_memalign((void**)&pos, 4096, bufSize);
     *buf = pos;
 
@@ -1478,13 +1397,23 @@ void AdaptiveRadixTree::Serialization(void** buf, int& size)
                                 childCount++;
                             }
                         }                   
-                        PrintNode(n);
                         assert(childCount == n->child_count);
                     }
                     break;
                 }
                 default:
                     assert(0);
+            }
+
+            if (bufSize - (pos - (char*)*buf) < _max_node_persistent_size)
+            {
+                bufSize *= 2;
+                char* newbuf = (char*)realloc(*buf, bufSize);
+                if (newbuf != *buf)
+                {
+                    pos = newbuf + (pos - (char*)*buf);
+                    *buf = newbuf;
+                }
             }
 
             int nodeSize = 0;
@@ -1497,7 +1426,7 @@ void AdaptiveRadixTree::Serialization(void** buf, int& size)
     size = (char*)pos - (char*)*buf;
 }
 
-void AdaptiveRadixTree::PrintNode(Node* node)
+void AdaptiveRadixTree::DumpNode(Node* node)
 {
     printf("{ ");
     printf("Node: %p\t", node);
@@ -1569,15 +1498,15 @@ void AdaptiveRadixTree::DumpTree()
     while (!q.empty())
     {
         int levelCount = q.size();
-        printf("+---------------------------+\n");
-        printf("|Level %4d LevelCount %4d |\n", level, levelCount);
-        printf("+---------------------------+\n");
+        printf("+--------------------------------+\n");
+        printf("|  Level %4d   LevelCount %4d  |\n", level, levelCount);
+        printf("+--------------------------------+\n");
         level++;
         for (int i = 0; i < levelCount; i++)
         {
             Node* n = q.front();
             q.pop();
-            PrintNode(n);
+            DumpNode(n);
             if (n->is_leaf)
             {
                 continue;

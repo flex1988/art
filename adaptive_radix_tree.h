@@ -141,7 +141,7 @@ public:
     {
     }
 
-    void Init(std::function<void(void*)> = NULL, std::function<void(void*)> = NULL);
+    void Init();
 
     // 插入不会失败
     void Insert(uint64_t key, void* val);
@@ -171,7 +171,7 @@ public:
 
     int Deserialization(const void* buf, const int bufSize);
 
-    void PrintNode(Node* node);
+    void DumpNode(Node* node);
 
     void DumpTree();
 
@@ -226,10 +226,7 @@ private:
     Node*       _root;
     uint64_t    _used_memory;
     uint64_t    _total_keys;
-    // 用一种通用的方法解决，老的val所在的entry被插入了新值时，老的val释放的问题
-    std::function<void(void*)> _deref_func;
-    // 解决rangeinsert时，插入一个数组的val性能太差，而只给一个start时，val需要递增的问题
-    std::function<void(void*)> _incr_func;
+    uint64_t    _max_node_persistent_size;
 };
 
 }
