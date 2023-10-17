@@ -1,4 +1,6 @@
 build --color=yes
+build --copt -fsanitize=address
 build --copt -g
 build --copt -O3
+build --linkopt=-fsanitize=address
 build --strip=never

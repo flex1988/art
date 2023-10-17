@@ -3,15 +3,29 @@ on:
   push:
     branches:
       - main
-
 jobs:
   build:
     name: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: build
-        run: bazelisk build //...
+    - uses: actions/checkout@v3
+    - uses: bazelbuild/setup-bazelisk@v2
+    - name: Mount bazel cache  # Optional
+      uses: actions/cache@v3
+      with:
+        path: "~/.cache/bazel"
+        key: bazel
 
-      - name: run ut
-        run: ./bazel-bin/art_unittest
+    - run: bazel build //...
+
+    - name: run ut
+      run: | 
+        ulimit -c unlimited 
+        ulimit -c
+        #./bazel-bin/art_unittest
+
+    - uses: actions/upload-artifact@master # capture all crashes as build artifacts
+      if: always()
+      with:
+        name: crashes
+        path: /cores/

@@ -528,27 +528,37 @@ void AdaptiveRadixTree::addChild16(Node16* node16, Node** ref, unsigned char byt
             node->child_count++;
             return;
         }
-        int mask = (1 << node->child_count) - 1;
-        __m128i cmp = _mm_cmplt_epi8(_mm_set1_epi8(byte),
-                _mm_loadu_si128(reinterpret_cast<const __m128i*>(node16->child_keys)));
-        int bitfield = _mm_movemask_epi8(cmp);
-        uint32_t idx;
-        if (bitfield)
+
+        int slot;
+        for (slot = 0; slot < node->child_count; slot++)
         {
-            idx = __builtin_ctz(bitfield);
-            if (node->child_count > idx)
+            if (byte < node16->child_keys[slot])
             {
-                memmove(&node16->child_keys[idx + 1], &node16->child_keys[idx], node->child_count - idx);
-                memmove(&node16->child_ptrs[idx + 1], &node16->child_ptrs[idx], (node->child_count - idx) * sizeof(void*));
+                break;
             }
         }
-        else
-        {
-            idx = node->child_count;
-        }
 
-        node16->child_keys[idx] = byte;
-        node16->child_ptrs[idx] = reinterpret_cast<Node*>(child);
+        // int mask = (1 << node->child_count) - 1;
+        // __m128i cmp = _mm_cmplt_epi8(_mm_set1_epi8(byte),
+        //         _mm_loadu_si128(reinterpret_cast<const __m128i*>(node16->child_keys)));
+        // int bitfield = _mm_movemask_epi8(cmp);
+        // uint32_t idx;
+        // if (bitfield)
+        // {
+            // idx = __builtin_ctz(bitfield);
+        if (node->child_count > slot)
+        {
+            memmove(&node16->child_keys[slot + 1], &node16->child_keys[slot], node->child_count - slot);
+            memmove(&node16->child_ptrs[slot + 1], &node16->child_ptrs[slot], (node->child_count - slot) * sizeof(void*));
+        }
+        // }
+        // else
+        // {
+        //     idx = node->child_count;
+        // }
+
+        node16->child_keys[slot] = byte;
+        node16->child_ptrs[slot] = reinterpret_cast<Node*>(child);
         node->child_count++;
     }
     else
@@ -643,14 +653,21 @@ Node** AdaptiveRadixTree::findChild(Node* node, unsigned char byte)
         case NODE16:
         {
             Node16* n = reinterpret_cast<Node16*>(node);
-            __m128i results = _mm_cmpeq_epi8(_mm_set1_epi8(byte), _mm_loadu_si128((__m128i*)(&n->child_keys[0])));
-            int mask = (1 << node->child_count) - 1;
-            int bitfield = _mm_movemask_epi8(results) & mask;
-            if (bitfield == 0)
+            for (int i = 0; i < node->child_count; i++)
             {
-                return NULL;
+                if (n->child_keys[i] == byte)
+                {
+                    return &n->child_ptrs[i];
+                }
             }
-            return &n->child_ptrs[__builtin_ctz(bitfield)];
+            // __m128i results = _mm_cmpeq_epi8(_mm_set1_epi8(byte), _mm_loadu_si128((__m128i*)(&n->child_keys[0])));
+            // int mask = (1 << node->child_count) - 1;
+            // int bitfield = _mm_movemask_epi8(results) & mask;
+            // if (bitfield == 0)
+            // {
+            //     return NULL;
+            // }
+            return NULL;//&n->child_ptrs[__builtin_ctz(bitfield)];
         }
         case NODE48:
         {
